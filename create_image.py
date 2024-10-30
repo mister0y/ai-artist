@@ -1,5 +1,6 @@
 import torch
 from diffusers import StableDiffusion3Pipeline, StableDiffusionPipeline
+from huggingface_hub import InferenceClient
 from PIL import Image, ImageDraw, ImageFont
 import os
 import requests
@@ -8,6 +9,50 @@ from datetime import datetime
 from PIL import Image
 import io
 import base64
+
+def generate_image_huggingface(prompt, title):
+    """
+    Generate an image using the OpenJourney model via HuggingFace Inference API,
+    and add a title and date to it.
+    
+    Args:
+    prompt (str): The text prompt to generate the image from.
+    title (str): The title to add to the image.
+    
+    Returns:
+    PIL.Image.Image: The generated image with title and date.
+    """
+    load_dotenv()
+    api_key = os.getenv('HUGGINGFACE_API_KEY')
+    
+    client = InferenceClient(token=api_key)
+    
+    # Generate image using OpenJourney model
+    image_bytes = client.post(
+        model="prompthero/openjourney",
+        data={
+            "inputs": prompt,
+            "parameters": {
+                "negative_prompt": "photorealistic"
+            }
+        }
+    )
+    
+    # Convert bytes to PIL Image
+    image = Image.open(io.BytesIO(image_bytes))
+    
+    # Add title and date to the image
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+    
+    # Add title
+    draw.text((10, 10), title, font=font, fill=(255, 255, 255))
+    
+    # Add date
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    draw.text((10, image.height - 30), current_date, font=font, fill=(255, 255, 255))
+    
+    return image
 
 def generate_image_openjourney(prompt, title):
     """
